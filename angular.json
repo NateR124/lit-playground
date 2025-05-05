@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "my-web-components-playground": {
+    "lit-playground": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/my-web-components-playground",
+            "outputPath": "dist/lit-playground",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -69,10 +69,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "my-web-components-playground:build:production"
+              "buildTarget": "lit-playground:build:production"
             },
             "development": {
-              "buildTarget": "my-web-components-playground:build:development"
+              "buildTarget": "lit-playground:build:development"
             }
           },
           "defaultConfiguration": "development"
