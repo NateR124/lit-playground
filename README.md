@@ -1,3 +1,6 @@
-# Lit Web Component Playground
+# Lit GPT Flow Playground
 
-This is a simple web component to demonstrate the use of Lit Web Components! It is currently a WIP, and should have a minimum working version by 6PM EST on Monday, May 5th.
+This is a webapp that will use Lit Web Components to assemble an "OpenAI Prompt workflow". Will add details describing the app's functionality as it is further built out.
+
+## NOTE: As of Monday May 5th, this is still a Work in Progress!
+I'm building this app in a day- it should be complete by the morning of Tuesday May the 6th (ideally with a visitable demo)!
