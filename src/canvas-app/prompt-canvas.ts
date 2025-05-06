@@ -38,7 +38,10 @@ export class PromptCanvas extends LitElement {
   }
 
   private handleDragNode(e: CustomEvent) {
-    this.controller.updateNodePosition(e.detail.id, e.detail.x, e.detail.y);
+    const { id, x, y } = e.detail;
+    this.controller.updateNodePosition(id, x, y);
+  
+    this.requestUpdate();
     this.save();
   }
 
@@ -47,10 +50,26 @@ export class PromptCanvas extends LitElement {
   }
 
   override render() {
+    const connections = this.controller.connections
+      .map(conn => {
+        const fromEl = this.shadowRoot?.querySelector(`[data-id="${conn.from}"]`);
+        const toEl = this.shadowRoot?.querySelector(`[data-id="${conn.to}"]`);
+        return fromEl && toEl
+          ? { from: fromEl.getBoundingClientRect(), to: toEl.getBoundingClientRect() }
+          : null;
+      })
+      .filter((x): x is { from: DOMRect, to: DOMRect } => x !== null);
+  
     return html`
-      <button style="position: absolute; top: 1rem; left: 1rem; z-index: 10" @click=${this.handleAddNode}>+ Add Node</button>
+      <button style="position: absolute; top: 1rem; left: 1rem; z-index: 10" @click=${this.handleAddNode}>
+        +
+      </button>
+  
+      <connection-layer .connections=${connections}></connection-layer>
+  
       ${this.controller.nodes.map(node => html`
         <node-box
+          data-id=${node.id}
           .nodeId=${node.id}
           .x=${node.x}
           .y=${node.y}
@@ -59,5 +78,5 @@ export class PromptCanvas extends LitElement {
         ></node-box>
       `)}
     `;
-  }
+  } 
 }

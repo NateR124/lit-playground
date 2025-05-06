@@ -55,8 +55,8 @@ export class PromptCanvas extends LitElement {
         <button @click=${this.addNode}>＋ Node</button>
       </div>
       <div class="grid-bg"
-           @node-moved=${this.onNodeMoved}
-           @node-delete=${this.onNodeDelete}>
+          @node-dragged=${this.onNodeMoved}
+          @node-delete=${this.onNodeDelete}>
         ${this.nodes.map(n => html`<prompt-node id=${n.id} .x=${n.x} .y=${n.y}></prompt-node>`)}
       </div>
     `;

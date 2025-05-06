@@ -10,11 +10,13 @@ export interface NodeData {
     public nodes: NodeData[] = [];
     public zoom = 1;
     public offset = { x: 0, y: 0 };
-  
+
+    connections: { from: string; to: string }[] = [];
+
     constructor(initialNodes: NodeData[] = []) {
       this.nodes = initialNodes;
     }
-  
+
     addNode(x = 100, y = 100) {
       const id = crypto.randomUUID();
       this.nodes.push({ id, x, y });
