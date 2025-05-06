@@ -1,0 +1,63 @@
+// canvas-app/prompt-canvas.ts
+import { LitElement, html, css } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { FlowController } from './flow-controller';
+import '../node-box/node-box';
+
+@customElement('prompt-canvas')
+export class PromptCanvas extends LitElement {
+  static override styles = css`
+    :host {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+  `;
+
+  @state() private controller = new FlowController();
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    const saved = localStorage.getItem('flow-data');
+    if (saved) this.controller.deserialize(saved);
+    else this.controller.addNode(200, 150);
+    console.log('Controller nodes:', this.controller.nodes);
+  }
+
+  private handleAddNode() {
+    this.controller.addNode(100 + Math.random() * 400, 100 + Math.random() * 300);
+    this.requestUpdate();
+    this.save();
+  }
+
+  private handleDeleteNode(e: CustomEvent) {
+    this.controller.removeNode(e.detail.id);
+    this.requestUpdate();
+    this.save();
+  }
+
+  private handleDragNode(e: CustomEvent) {
+    this.controller.updateNodePosition(e.detail.id, e.detail.x, e.detail.y);
+    this.save();
+  }
+
+  private save() {
+    localStorage.setItem('flow-data', this.controller.serialize());
+  }
+
+  override render() {
+    return html`
+      <button style="position: absolute; top: 1rem; left: 1rem; z-index: 10" @click=${this.handleAddNode}>+ Add Node</button>
+      ${this.controller.nodes.map(node => html`
+        <node-box
+          .nodeId=${node.id}
+          .x=${node.x}
+          .y=${node.y}
+          @node-dragged=${this.handleDragNode}
+          @node-delete=${this.handleDeleteNode}
+        ></node-box>
+      `)}
+    `;
+  }
+}
