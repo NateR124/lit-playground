@@ -6,6 +6,7 @@ export interface NodeData {
     y: number;
     w: number;
     h: number;
+    dependsOn: string[];
   }
   
   export class FlowController {
@@ -23,7 +24,7 @@ export interface NodeData {
       const id = crypto.randomUUID();
       const w = 200;
       const h = 230;
-      this.nodes.push({ id, x, y, w, h });
+      this.nodes.push({ id, x, y, w, h, dependsOn: [] });
       return id;
     }
   
@@ -65,4 +66,3 @@ export interface NodeData {
       }
     }
   }
-  

@@ -9,6 +9,7 @@ interface NodeData{
   y:number;
   w:number;
   h:number;
+  dependsOn: string[];
 }
 
 @customElement('prompt-canvas')
@@ -38,7 +39,7 @@ export class PromptCanvas extends LitElement {
   }
 
   private addNode() {
-    this.nodes = [...this.nodes, { id:crypto.randomUUID(), x:100, y:100, w:200, h:230 }];
+    this.nodes = [...this.nodes, { id:crypto.randomUUID(), x:100, y:100, w:200, h:230, dependsOn: [] }];
     this.save();
   }
 
@@ -61,6 +62,17 @@ export class PromptCanvas extends LitElement {
   }
 
   override render() {
+    const connections = this.nodes
+      .flatMap(target => target.dependsOn.map(depId => {
+        const fromEl = this.shadowRoot?.querySelector(`[data-id="${depId}"]`);
+        const toEl   = this.shadowRoot?.querySelector(`[data-id="${target.id}"]`);
+
+        return (fromEl && toEl)
+          ? { from: fromEl.getBoundingClientRect(), to: toEl.getBoundingClientRect() }
+          : null;
+      }))
+      .filter((x): x is { from: DOMRect; to: DOMRect } => x !== null);
+
     return html`
       <link rel="stylesheet" href="./canvas-app/styles.css">
       <div class="toolbar">

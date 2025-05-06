@@ -56,15 +56,16 @@ export class PromptCanvas extends LitElement {
   }
 
   override render() {
-    const connections = this.controller.connections
-      .map(conn => {
-        const fromEl = this.shadowRoot?.querySelector(`[data-id="${conn.from}"]`);
-        const toEl = this.shadowRoot?.querySelector(`[data-id="${conn.to}"]`);
-        return fromEl && toEl
+    const connections = this.controller.nodes
+      .flatMap(target => target.dependsOn.map(depId => {
+        const fromEl = this.shadowRoot?.querySelector(`[data-id="${depId}"]`);
+        const toEl   = this.shadowRoot?.querySelector(`[data-id="${target.id}"]`);
+
+        return (fromEl && toEl)
           ? { from: fromEl.getBoundingClientRect(), to: toEl.getBoundingClientRect() }
           : null;
-      })
-      .filter((x): x is { from: DOMRect, to: DOMRect } => x !== null);
+      }))
+      .filter((x): x is { from: DOMRect; to: DOMRect } => x !== null);
   
     return html`
       <button style="position: absolute; top: 1rem; left: 1rem; z-index: 10" @click=${this.handleAddNode}>

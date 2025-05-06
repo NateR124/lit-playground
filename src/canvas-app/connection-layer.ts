@@ -25,7 +25,7 @@ export class ConnectionLayer extends LitElement {
 
   private getPath(from: DOMRect, to: DOMRect): string {
     const startX = from.right;
-    const startY = from.top + from.height / 2;
+    const startY = from.top + from.height * 0.75;
     const endX = to.left;
     const endY = to.top + to.height / 2;
 
