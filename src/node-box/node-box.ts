@@ -7,9 +7,12 @@ export class NodeBox extends LitElement {
   static override styles = css`
     :host {
       position: absolute;
-      display: block;
+      display: flex;
+      flex-direction: column;
       width: 200px;
-      height: 120px;
+      height: 230px;
+      min-width: 200px;
+      min-height: 230px;
       background: #2b2b2b;
       border: 2px solid #555;
       border-radius: 8px;
@@ -18,7 +21,10 @@ export class NodeBox extends LitElement {
       font-family: sans-serif;
       user-select: none;
       cursor: grab;
+      resize: both;
+      overflow: hidden;
     }
+
     :host([dragging]) { cursor: grabbing; }
 
     .header {
@@ -29,23 +35,66 @@ export class NodeBox extends LitElement {
       background: #444;
       border-bottom: 1px solid #555;
     }
-    .body { padding: 0.5rem; font-size: 0.8rem; }
 
-    /* single output dot */
+    .body {
+      font-size: 0.8rem; 
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+     }
+
+    .output, .input {
+      flex: 1;
+      display: flex;
+      position: relative;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .input {
+      textarea {
+       background-color: #424242;
+      }
+    }
+
     .handle.out {
       position: absolute;
       right: -6px;
-      top: 50%;
+      bottom: 50%;
       width: 12px;
       height: 12px;
-      transform: translateY(-50%);
       border-radius: 50%;
       background: #66ccff;
       cursor: pointer;
-      z-index: 2;
+      z-index: 4;
     }
-    /* hide left input dot completely */
-    .handle.in { display: none; }
+
+    .handle.in {
+      display: none;  
+      position: absolute;
+      left: -6px;
+      bottom: 50%;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #66ccff;
+      cursor: pointer;
+      z-index: 4; 
+    }
+
+    textarea {
+      flex: 1;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 0.5rem;
+      font-size: 0.8rem;
+      width: 100%;
+      height: 100%;
+      resize: none;
+    }
 
     button {
       background: transparent;
@@ -60,6 +109,9 @@ export class NodeBox extends LitElement {
   @property() nodeId!: string;
   @property({type: Number}) x = 0;
   @property({type: Number}) y = 0;
+
+  @property(({type: String })) output = '';
+  @property(({type: String })) systemPrompt = '';
 
   /* --- drag state --- */
   private pointerId: number | null = null;
@@ -78,7 +130,7 @@ export class NodeBox extends LitElement {
 
   /* --- drag handlers --- */
   private onPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0) return;            // left‑click only
+    if (e.button !== 0) return;
     const rect = this.getBoundingClientRect();
     this.offsetX = e.clientX - rect.left;
     this.offsetY = e.clientY - rect.top;
@@ -142,11 +194,27 @@ export class NodeBox extends LitElement {
     return html`
       <div class="header" @pointerdown=${this.onPointerDown}>
         <span>Node</span>
-        <button @pointerdown=${(e: PointerEvent)=>e.stopPropagation()}
-                @click=${this.deleteSelf}>✕</button>
+        <button @pointerdown=${(e: PointerEvent)=>e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
       </div>
-      <div class="body">Prompt content</div>
-      <div class="handle out" @pointerdown=${this.startConnect}></div>
+      <div class="body">
+        <div class="input">    
+          <textarea
+            .value=${this.systemPrompt}
+            @input=${(e: any) => this.systemPrompt = e.target.value}
+          >
+          </textarea>
+          <div class="handle in" @pointerdown=${this.startConnect}></div>
+        </div>
+        <div class="output">
+          <textarea
+            .value=${this.output}
+            readonly=true
+            >
+          </textarea>
+          <div class="handle out" @pointerdown=${this.startConnect}></div>
+        </div>
+      </div>
+     
     `;
   }
 }
