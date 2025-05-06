@@ -5,112 +5,101 @@ import { customElement, property } from 'lit/decorators.js';
 @customElement('node-box')
 export class NodeBox extends LitElement {
   static override styles = css`
-    :host {
-      position: absolute;
-      display: flex;
-      flex-direction: column;
-      width: 200px;
-      height: 230px;
-      min-width: 200px;
-      min-height: 230px;
-      background: #2b2b2b;
-      border: 2px solid #555;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-      color: white;
-      font-family: sans-serif;
-      user-select: none;
-      cursor: grab;
-      resize: both;
-      overflow: hidden;
-    }
+  :host {
+    position:absolute;
+    display:flex;
+    flex-direction:column;
 
-    :host([dragging]) { cursor: grabbing; }
+    width:200px;
+    height:230px;
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem;
-      background: #444;
-      border-bottom: 1px solid #555;
-    }
+    min-width:200px;
+    min-height:230px;
 
-    .body {
-      font-size: 0.8rem; 
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-     }
+    background:#2b2b2b;
+    border:2px solid #555;
+    border-radius:8px;
+    box-shadow:0 2px 4px rgba(0 0 0 /.3);
+    color:#fff;
+    font-family:sans-serif;
+    cursor:grab;
+    user-select:none;
 
-    .output, .input {
-      flex: 1;
-      display: flex;
-      position: relative;
-      box-sizing: border-box;
-      align-items: center;
-      justify-content: center;
-    }
+    resize:both;
+    overflow:hidden;
+  }
+  :host([dragging]){cursor:grabbing;}
 
-    .input {
-      textarea {
-       background-color: #424242;
-      }
-    }
+  .header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:.5rem;
+    background:#444;
+    border-bottom:1px solid #555;
+  }
 
-    .handle.out {
-      position: absolute;
-      right: -6px;
-      bottom: 50%;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #66ccff;
-      cursor: pointer;
-      z-index: 4;
-    }
+  .body{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    font-size:.8rem;
+  }
 
-    .handle.in {
-      display: none;  
-      position: absolute;
-      left: -6px;
-      bottom: 50%;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #66ccff;
-      cursor: pointer;
-      z-index: 4; 
-    }
+  .input,.output{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
 
-    textarea {
-      flex: 1;
-      background: #333;
-      color: white;
-      border: 1px solid #555;
-      border-radius: 4px;
-      padding: 0.5rem;
-      font-size: 0.8rem;
-      width: 100%;
-      height: 100%;
-      resize: none;
-    }
+  .input textarea{background:#424242;}
 
-    button {
-      background: transparent;
-      border: none;
-      color: white;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-    button:hover { color: #ff6666; }
-  `;
+  .handle{
+    position:absolute;
+    bottom:50%;
+    width:12px;
+    height:12px;
+    border-radius:45%;
+    background:#F5F5F5;
+    cursor:pointer;
+    z-index:4;
+  }
+    
+  .handle.out{right:-6px;}
+  .handle.in{left:-6px;display:none;}
+
+  textarea{
+    flex:1;
+    background:#333;
+    margin:.5rem;
+    color:#fff;
+    border:1px solid #555;
+    border-radius:4px;
+    font-size:.8rem;
+    resize:none;              
+    box-sizing:border-box;
+    min-height:0;
+  }
+
+  button{
+    background:none;
+    border:none;
+    color:#fff;
+    font-size:1rem;
+    cursor:pointer;
+  }
+  button:hover{color:#ff6666;}
+`;
 
   @property() nodeId!: string;
   @property({type: Number}) x = 0;
   @property({type: Number}) y = 0;
+  @property({type: Number}) w = 200;
+  @property({type: Number}) h = 230;
 
   @property(({type: String })) output = '';
+  @property(({type: String })) input = '';
   @property(({type: String })) systemPrompt = '';
 
   /* --- drag state --- */
@@ -122,8 +111,21 @@ export class NodeBox extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.updatePosition();
+    this.updateSize();
+
+    /* watch for manual resize */
+    this.ro = new ResizeObserver(([entry])=>{
+      const {width,height} = entry.contentRect;
+      this.w = width;
+      this.h = height;
+      this.dispatchEvent(new CustomEvent('node-resized',{
+        detail:{ id:this.nodeId, w:width, h:height },
+        bubbles:true,composed:true
+      }));
+    });
+    this.ro.observe(this);
   }
-  override updated() { this.updatePosition(); }
+  override updated() { this.updatePosition();   this.updateSize();}
   private updatePosition() {
     this.style.transform = `translate(${this.x}px, ${this.y}px)`;
   }
@@ -168,7 +170,7 @@ export class NodeBox extends LitElement {
 
   /* --- delete & connect --- */
   private deleteSelf = (e: MouseEvent) => {
-    e.stopPropagation();                   // don’t trigger a drag
+    e.stopPropagation();
     this.dispatchEvent(new CustomEvent('node-delete', {
       detail: { id: this.nodeId },
       bubbles: true,
@@ -189,11 +191,24 @@ export class NodeBox extends LitElement {
     }));
   };
 
+  /* --- resize handlers --- */
+  private ro?:ResizeObserver;
+
+  override disconnectedCallback(){
+    this.ro?.disconnect();
+    super.disconnectedCallback();
+  }
+
+  private updateSize(){
+    this.style.width  = `${this.w}px`;
+    this.style.height = `${this.h}px`;
+  }
+
   /* --- template --- */
   override render() {
     return html`
       <div class="header" @pointerdown=${this.onPointerDown}>
-        <span>Node</span>
+        <span></span>
         <button @pointerdown=${(e: PointerEvent)=>e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
       </div>
       <div class="body">
@@ -201,6 +216,13 @@ export class NodeBox extends LitElement {
           <textarea
             .value=${this.systemPrompt}
             @input=${(e: any) => this.systemPrompt = e.target.value}
+             placeholder="System Prompt"
+          >
+          </textarea>
+          <textarea
+            .value=${this.input}
+            @input=${(e: any) => this.input = e.target.value}
+            placeholder="User Text"
           >
           </textarea>
           <div class="handle in" @pointerdown=${this.startConnect}></div>

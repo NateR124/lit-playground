@@ -4,6 +4,8 @@ export interface NodeData {
     id: string;
     x: number;
     y: number;
+    w: number;
+    h: number;
   }
   
   export class FlowController {
@@ -19,7 +21,9 @@ export interface NodeData {
 
     addNode(x = 100, y = 100) {
       const id = crypto.randomUUID();
-      this.nodes.push({ id, x, y });
+      const w = 200;
+      const h = 230;
+      this.nodes.push({ id, x, y, w, h });
       return id;
     }
   
@@ -35,6 +39,14 @@ export interface NodeData {
       }
     }
   
+    updateNodeSize(id: string, w: number, h: number) {
+      const node = this.nodes.find((n) => n.id === id);
+      if (node) {
+        node.w = w;
+        node.h = h;
+      }
+    }
+
     updateZoomAndOffset(scale: number, x: number, y: number) {
       this.zoom = scale;
       this.offset = { x, y };

@@ -22,7 +22,6 @@ export class PromptCanvas extends LitElement {
     const saved = localStorage.getItem('flow-data');
     if (saved) this.controller.deserialize(saved);
     else this.controller.addNode(200, 150);
-    console.log('Controller nodes:', this.controller.nodes);
   }
 
   private handleAddNode() {
@@ -33,6 +32,13 @@ export class PromptCanvas extends LitElement {
 
   private handleDeleteNode(e: CustomEvent) {
     this.controller.removeNode(e.detail.id);
+    this.requestUpdate();
+    this.save();
+  }
+
+  private handleResizeNode(e: CustomEvent) {
+    const { id, w, h } = e.detail;
+    this.controller.updateNodeSize(id, w, h);
     this.requestUpdate();
     this.save();
   }
@@ -73,7 +79,10 @@ export class PromptCanvas extends LitElement {
           .nodeId=${node.id}
           .x=${node.x}
           .y=${node.y}
+          .w=${node.w}
+          .h=${node.h}
           @node-dragged=${this.handleDragNode}
+          @node-resized=${this.handleResizeNode}
           @node-delete=${this.handleDeleteNode}
         ></node-box>
       `)}

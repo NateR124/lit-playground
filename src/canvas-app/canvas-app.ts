@@ -3,7 +3,13 @@ import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import '../node-box/node-box.js';
 
-interface NodeData { id:string; x:number; y:number; }
+interface NodeData{
+  id:string;
+  x:number;
+  y:number;
+  w:number;
+  h:number;
+}
 
 @customElement('prompt-canvas')
 export class PromptCanvas extends LitElement {
@@ -32,13 +38,19 @@ export class PromptCanvas extends LitElement {
   }
 
   private addNode() {
-    this.nodes = [...this.nodes, { id: crypto.randomUUID(), x: 100, y: 100 }];
+    this.nodes = [...this.nodes, { id:crypto.randomUUID(), x:100, y:100, w:200, h:230 }];
     this.save();
   }
 
-  private onNodeMoved(e: CustomEvent) {
-    const { id, x, y } = e.detail;
-    this.nodes = this.nodes.map(n => n.id === id ? { ...n, x, y } : n);
+  private onNodeMoved(e:CustomEvent){
+    const {id,x,y} = e.detail;
+    this.nodes = this.nodes.map(n => n.id===id ? {...n,x,y} : n);
+    this.save();
+  }
+
+  private onNodeResized(e:CustomEvent){
+    const {id,w,h} = e.detail;
+    this.nodes = this.nodes.map(n => n.id===id ? {...n,w,h} : n);
     this.save();
   }
 
@@ -55,9 +67,11 @@ export class PromptCanvas extends LitElement {
         <button @click=${this.addNode}>＋ Node</button>
       </div>
       <div class="grid-bg"
-          @node-dragged=${this.onNodeMoved}
-          @node-delete=${this.onNodeDelete}>
-        ${this.nodes.map(n => html`<prompt-node id=${n.id} .x=${n.x} .y=${n.y}></prompt-node>`)}
+        @node-dragged=${this.onNodeMoved}
+        @node-delete=${this.onNodeDelete}
+        @node-resized=${this.onNodeResized}  
+      >    
+        ${this.nodes.map(n => html`<prompt-node id=${n.id} .x=${n.x} .y=${n.y} .w=${n.w} .h=${n.h}></prompt-node>`)}
       </div>
     `;
   }
