@@ -6,16 +6,23 @@ import { customElement, property } from 'lit/decorators.js';
 export class NodeBox extends LitElement {
   static override styles = css`
   :host {
-    position: absolute;
+    position: absolute; 
+    display: inline-block;
+  }
+
+  .node-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .box {
+    position: relative;
     display: flex;
     flex-direction: column;
-
     width: 200px;
     height: 230px;
-
     min-width: 200px;
     min-height: 230px;
-
     background: #2b2b2b;
     border: 2px solid #555;
     border-radius: 8px;
@@ -24,11 +31,11 @@ export class NodeBox extends LitElement {
     font-family: sans-serif;
     cursor: grab;
     user-select: none;
-
     resize: both;
-    overflow: visible !important;
+    overflow: hidden;
   }
-  :host([dragging]) {
+  
+  .box[dragging] {
     cursor: grabbing;
   }
 
@@ -46,7 +53,6 @@ export class NodeBox extends LitElement {
     display: flex;
     flex-direction: column;
     font-size: 0.8rem;
-    overflow: hidden;
   }
 
   .input, .output {
@@ -72,11 +78,9 @@ export class NodeBox extends LitElement {
   }
   
   .handle.out {
-    position: absolute;
     right: -6px;
-    top: 50%; /* Center relative to the host element */
+    top: 50%;
     transform: translateY(-50%);
-    z-index: 10;
   }
   
   .handle:hover {
@@ -108,13 +112,11 @@ export class NodeBox extends LitElement {
     color: #ff6666;
   }
   
-  /* Target node highlighting when dragging a connection */
-  :host(.connection-target) {
+  .box.connection-target {
     box-shadow: 0 0 0 2px #6c9, 0 2px 4px rgba(0, 0, 0, 0.3);
   }
   
-  /* Invalid target styling */
-  :host(.invalid-target) {
+  .box.invalid-target {
     box-shadow: 0 0 0 2px #f66, 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 `;
@@ -132,29 +134,41 @@ export class NodeBox extends LitElement {
   private pointerId: number | null = null;
   private offsetX = 0;
   private offsetY = 0;
+  private boxElement: HTMLElement | null = null;
 
   /* --- Lifecycle --- */
   override connectedCallback() {
     super.connectedCallback();
     this.updatePosition();
-    this.updateSize();
-
-    this.ro = new ResizeObserver(([entry]) => {
-      const {width, height} = entry.contentRect;
-      this.w = width;
-      this.h = height;
-      this.dispatchEvent(new CustomEvent('node-resized', {
-        detail: { id: this.nodeId, w: width, h: height },
-        bubbles: true,
-        composed: true
-      }));
-    });
-    this.ro.observe(this);
+  }
+  
+  override firstUpdated() {
+    // Get a reference to the box element
+    this.boxElement = this.shadowRoot?.querySelector('.box') as HTMLElement;
+    if (this.boxElement) {
+      this.ro = new ResizeObserver(([entry]) => {
+        const {width, height} = entry.contentRect;
+        this.w = width;
+        this.h = height;
+        this.dispatchEvent(new CustomEvent('node-resized', {
+          detail: { id: this.nodeId, w: width, h: height },
+          bubbles: true,
+          composed: true
+        }));
+      });
+      this.ro.observe(this.boxElement);
+      
+      // Set initial size
+      this.updateSize();
+    }
   }
   
   override updated() { 
-    this.updatePosition();   
-    this.updateSize();
+    this.updatePosition();
+    
+    if (this.boxElement) {
+      this.updateSize();
+    }
   }
   
   private updatePosition() {
@@ -164,13 +178,19 @@ export class NodeBox extends LitElement {
   /* --- Drag --- */
   private onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
+    
+    // Get the rect from the host element (for accurate positioning)
     const rect = this.getBoundingClientRect();
     this.offsetX = e.clientX - rect.left;
     this.offsetY = e.clientY - rect.top;
 
     this.pointerId = e.pointerId;
-    this.setPointerCapture(this.pointerId);
-    this.toggleAttribute('dragging', true);
+    this.setPointerCapture(this.pointerId); // Set pointer capture on the host element
+    
+    // Add dragging attribute to the box element
+    if (this.boxElement) {
+      this.boxElement.toggleAttribute('dragging', true);
+    }
 
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -179,8 +199,12 @@ export class NodeBox extends LitElement {
 
   private onPointerMove = (e: PointerEvent) => {
     if (e.pointerId !== this.pointerId) return;
+    
+    // Calculate position based on the offset from when we started dragging
     const newX = e.clientX - this.offsetX;
     const newY = e.clientY - this.offsetY;
+    
+    // Dispatch event to update position in the parent
     this.dispatchEvent(new CustomEvent('node-dragged', {
       detail: { id: this.nodeId, x: newX, y: newY },
       bubbles: true,
@@ -190,9 +214,14 @@ export class NodeBox extends LitElement {
 
   private onPointerUp = (e: PointerEvent) => {
     if (e.pointerId !== this.pointerId) return;
+    
     this.releasePointerCapture(this.pointerId!);
     this.pointerId = null;
-    this.toggleAttribute('dragging', false);
+    
+    // Remove dragging attribute from the box
+    if (this.boxElement) {
+      this.boxElement.toggleAttribute('dragging', false);
+    }
 
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
@@ -271,41 +300,47 @@ export class NodeBox extends LitElement {
   }
 
   private updateSize() {
-    this.style.width = `${this.w}px`;
-    this.style.height = `${this.h}px`;
+    if (this.boxElement) {
+      this.boxElement.style.width = `${this.w}px`;
+      this.boxElement.style.height = `${this.h}px`;
+    }
   }
 
   override render() {
     return html`
-      <div class="header" @pointerdown=${this.onPointerDown}>
-        <span></span>
-        <button @pointerdown=${(e: Event) => e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
-      </div>
-      <div class="body">
-        <div class="input">
-          <!-- Removed handle in -->
-          <textarea
-            .value=${this.systemPrompt}
-            @input=${(e: Event) => this.systemPrompt = (e.target as HTMLTextAreaElement).value}
-            placeholder="System Prompt"
-          >
-          </textarea>
-          <textarea
-            .value=${this.input}
-            @input=${(e: Event) => this.input = (e.target as HTMLTextAreaElement).value}
-            placeholder="User Text"
-          >
-          </textarea>
+      <div class="node-container">
+        <div class="box">
+          <div class="header" @pointerdown=${this.onPointerDown}>
+            <span></span>
+            <button @pointerdown=${(e: Event) => e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
+          </div>
+          <div class="body">
+            <div class="input">
+              <textarea
+                .value=${this.systemPrompt}
+                @input=${(e: Event) => this.systemPrompt = (e.target as HTMLTextAreaElement).value}
+                placeholder="System Prompt"
+              >
+              </textarea>
+              <textarea
+                .value=${this.input}
+                @input=${(e: Event) => this.input = (e.target as HTMLTextAreaElement).value}
+                placeholder="User Text"
+              >
+              </textarea>
+            </div>
+            <div class="output">
+              <textarea
+                .value=${this.output}
+                readonly=true
+              >
+              </textarea>
+            </div>
+          </div>
         </div>
-        <div class="output">
-          <textarea
-            .value=${this.output}
-            readonly=true
-          >
-          </textarea>
-        </div>
+        <!-- Handle positioned relative to the node-container -->
+        <div class="handle out" @mousedown=${this.handleOutPointerDown}></div>
       </div>
-      <div class="handle out" @mousedown=${this.handleOutPointerDown}></div>
     `;
   }
 }

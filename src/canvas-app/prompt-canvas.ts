@@ -127,8 +127,16 @@ export class PromptCanvas extends LitElement {
   }
 
   private handleDeleteNode(e: CustomEvent) {
-    // Remove connections involving this node
     const { id } = e.detail;
+
+    // Remove any dependencies on this node from other nodes
+    this.controller.nodes.forEach(node => {
+      const dependencyIndex = node.dependsOn.indexOf(id);
+      if (dependencyIndex !== -1) {
+        console.log(`Removing dependency on ${id} from node ${node.id}`);
+        node.dependsOn.splice(dependencyIndex, 1);
+      }
+    });
     
     // Remove node from controller
     this.controller.removeNode(id);
@@ -139,7 +147,6 @@ export class PromptCanvas extends LitElement {
     this.requestUpdate();
     this.save();
   }
-
   private handleResizeNode(e: CustomEvent) {
     const { id, w, h } = e.detail;
     this.controller.updateNodeSize(id, w, h);
@@ -376,10 +383,17 @@ export class PromptCanvas extends LitElement {
     const targetNode = this.controller.nodes.find(n => n.id === targetId);
     if (!targetNode) return;
     
+    console.log("Creating connection:", { sourceId, targetId });
+    
     // Add the dependency if it doesn't already exist
     if (!targetNode.dependsOn.includes(sourceId)) {
       targetNode.dependsOn.push(sourceId);
+      console.log("Updated dependencies:", targetNode.dependsOn);
+      
+      // Force immediate update of connections
       this.updateConnectionsFromNodes();
+      console.log("Connections after update:", this.connections);
+      
       this.save();
     }
   }
