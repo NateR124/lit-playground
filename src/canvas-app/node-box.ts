@@ -35,8 +35,31 @@ export class NodeBox extends LitElement {
     overflow: hidden;
   }
   
+  .box[execution-status="waiting"] {
+    border-color: #ffc107;
+  }
+  
+  .box[execution-status="running"] {
+    border-color: #2196f3;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .box[execution-status="complete"] {
+    border-color: #4caf50;
+  }
+  
+  .box[execution-status="error"] {
+    border-color: #f44336;
+  }
+
   .box[dragging] {
     cursor: grabbing;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
   }
 
   .header {
@@ -126,11 +149,11 @@ export class NodeBox extends LitElement {
   @property({type: Number}) y = 0;
   @property({type: Number}) w = 200;
   @property({type: Number}) h = 230;
-
+  @property({type: String}) executionStatus: 'idle' | 'waiting' | 'running' | 'complete' | 'error' = 'idle';
   @property({type: String}) output = '';
   @property({type: String}) input = '';
   @property({type: String}) systemPrompt = '';
-  
+  @property({type: Boolean}) dragging = false;
   @property({type: Boolean, reflect: true}) connectionTarget = false;
   @property({type: Boolean, reflect: true}) invalidTarget = false;
 
@@ -138,6 +161,7 @@ export class NodeBox extends LitElement {
   private offsetX = 0;
   private offsetY = 0;
   private boxElement: HTMLElement | null = null;
+
 
   /* --- Lifecycle --- */
   override connectedCallback() {
@@ -330,7 +354,7 @@ export class NodeBox extends LitElement {
   override render() {
     return html`
       <div class="node-container">
-        <div class="box">
+        <div class="box" ?dragging=${this.dragging} execution-status=${this.executionStatus}>
           <div class="header" @pointerdown=${this.onPointerDown}>
             <span></span>
             <button @pointerdown=${(e: Event) => e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
