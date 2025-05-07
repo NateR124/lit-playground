@@ -1,3 +1,4 @@
+// src/canvas-app/prompt-canvas.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { FlowController } from './flow-controller.js';
@@ -52,6 +53,20 @@ export class PromptCanvas extends LitElement {
     button:hover {
       background: #555;
     }
+    
+    .tooltip {
+      position: absolute;
+      background: rgba(50, 50, 50, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      max-width: 200px;
+      text-align: center;
+    }
   `;
 
   @state() private controller = new FlowController();
@@ -63,6 +78,20 @@ export class PromptCanvas extends LitElement {
     mouseX: number;
     mouseY: number;
   } | null = null;
+  
+  @state() private tooltipInfo: {
+    visible: boolean;
+    text: string;
+    x: number;
+    y: number;
+  } = {
+    visible: false,
+    text: '',
+    x: 0,
+    y: 0
+  };
+
+  private tooltipTimer: number | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -84,6 +113,10 @@ export class PromptCanvas extends LitElement {
   
   override disconnectedCallback(): void {
     window.removeEventListener('mouseup', this.handleGlobalMouseUp);
+    if (this.tooltipTimer !== null) {
+      window.clearTimeout(this.tooltipTimer);
+      this.tooltipTimer = null;
+    }
     super.disconnectedCallback();
   }
 
@@ -161,13 +194,34 @@ export class PromptCanvas extends LitElement {
   private handleConnectionEnd(e: CustomEvent) {
     if (!this.draggingConnection) return;
     
+    // Clear tooltip
+    this.tooltipInfo = { ...this.tooltipInfo, visible: false };
+    if (this.tooltipTimer !== null) {
+      window.clearTimeout(this.tooltipTimer);
+      this.tooltipTimer = null;
+    }
+    
     // Find which node (if any) the connection ends on
     const { x, y } = e.detail;
     const targetElement = this.findNodeAtPosition(x, y);
     
-    if (targetElement && targetElement.nodeId !== this.draggingConnection.sourceId) {
+    if (targetElement && this.isValidConnectionTarget(this.draggingConnection.sourceId, targetElement)) {
       // Create a connection
-      this.createConnection(this.draggingConnection.sourceId, targetElement.nodeId);
+      const targetId = (targetElement as any).nodeId || 
+                       targetElement.getAttribute('nodeId') || 
+                       targetElement.getAttribute('data-id');
+      if (targetId) {
+        this.createConnection(this.draggingConnection.sourceId, targetId);
+      }
+    }
+    
+    // Remove highlighting from all nodes
+    const elements = this.shadowRoot?.querySelectorAll('node-box');
+    if (elements) {
+      elements.forEach(el => {
+        el.classList.remove('connection-target');
+        el.classList.remove('invalid-target');
+      });
     }
     
     // Clear dragging state
@@ -177,6 +231,13 @@ export class PromptCanvas extends LitElement {
   
   private handleGlobalMouseUp = () => {
     if (this.draggingConnection) {
+      // Clear tooltip
+      this.tooltipInfo = { ...this.tooltipInfo, visible: false };
+      if (this.tooltipTimer !== null) {
+        window.clearTimeout(this.tooltipTimer);
+        this.tooltipTimer = null;
+      }
+      
       this.draggingConnection = null;
       this.requestUpdate();
     }
@@ -188,7 +249,19 @@ export class PromptCanvas extends LitElement {
     if (!elements) return null;
     
     // First, remove highlight from all nodes
-    elements.forEach(el => el.classList.remove('connection-target'));
+    elements.forEach(el => {
+      el.classList.remove('connection-target');
+      el.classList.remove('invalid-target');
+    });
+    
+    // Clear any existing tooltip timer
+    if (this.tooltipTimer !== null) {
+      window.clearTimeout(this.tooltipTimer);
+      this.tooltipTimer = null;
+    }
+    
+    // Hide tooltip when not over any node
+    this.tooltipInfo = { ...this.tooltipInfo, visible: false };
     
     for (const element of Array.from(elements)) {
       const rect = element.getBoundingClientRect();
@@ -198,13 +271,104 @@ export class PromptCanvas extends LitElement {
         y >= rect.top && 
         y <= rect.bottom
       ) {
-        // Add highlight to target node
-        element.classList.add('connection-target');
+        // Get source node ID
+        if (this.draggingConnection) {
+          const sourceId = this.draggingConnection.sourceId;
+          
+          // Check if this is a valid target
+          const validationResult = this.validateConnectionTarget(sourceId, element);
+          
+          if (validationResult.isValid) {
+            element.classList.add('connection-target');
+          } else {
+            element.classList.add('invalid-target');
+            
+            // Set up tooltip with delay
+            this.tooltipTimer = window.setTimeout(() => {
+              this.tooltipInfo = {
+                visible: true,
+                text: validationResult.reason,
+                x: x + 10, // Offset from cursor
+                y: y + 20
+              };
+              this.requestUpdate();
+            }, 500); // 500ms delay
+          }
+        }
         return element;
       }
     }
     
     return null;
+  }
+  
+  // Enhanced validation that returns a reason
+  private validateConnectionTarget(sourceId: string, targetElement: Element | null): { isValid: boolean; reason: string } {
+    if (!targetElement) {
+      return { isValid: false, reason: 'No target node found' };
+    }
+    
+    // Try different ways to get the ID
+    const targetId = targetElement.getAttribute('data-id');
+    
+    // Check if the targetId is null
+    if (targetId === null) {
+      return { isValid: false, reason: 'Target node has no ID' };
+    }
+    
+    // Check if this is the same node (self-connection)
+    if (sourceId === targetId) {
+      return { isValid: false, reason: 'Cannot connect a node to itself' };
+    }
+    
+    // Get target node data model
+    const targetNode = this.controller.nodes.find(n => n.id === targetId);
+    if (!targetNode) {
+      return { isValid: false, reason: 'Target node not found in data model' };
+    }
+    
+    // Check for cycle - if target already depends on source directly or indirectly
+    if (this.wouldCreateCycle(sourceId, targetId)) {
+      return { isValid: false, reason: 'This would create a circular dependency' };
+    }
+    
+    // Add more validation criteria here as needed
+    
+    return { isValid: true, reason: '' };
+  }
+  
+  private isValidConnectionTarget(sourceId: string, targetElement: Element | null): boolean {
+    return this.validateConnectionTarget(sourceId, targetElement).isValid;
+  }
+  
+  // Check if adding a connection would create a dependency cycle
+  private wouldCreateCycle(sourceId: string, targetId: string): boolean {
+    // Quick check - direct cycle
+    const targetNode = this.controller.nodes.find(n => n.id === targetId);
+    if (!targetNode) return false;
+    
+    // If source already depends on target, this would create a cycle
+    if (this.isDependentOn(targetId, sourceId)) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  // Recursively check if nodeA depends on nodeB
+  private isDependentOn(nodeAId: string, nodeBId: string): boolean {
+    const nodeA = this.controller.nodes.find(n => n.id === nodeAId);
+    if (!nodeA) return false;
+    
+    // Direct dependency check
+    if (nodeA.dependsOn.includes(nodeBId)) return true;
+    
+    // Recursive check through all dependencies
+    for (const depId of nodeA.dependsOn) {
+      if (this.isDependentOn(depId, nodeBId)) return true;
+    }
+    
+    return false;
   }
   
   private createConnection(sourceId: string, targetId: string) {
@@ -316,6 +480,13 @@ export class PromptCanvas extends LitElement {
             @connection-end=${this.handleConnectionEnd}
           ></node-box>
         `)}
+        
+        ${this.tooltipInfo.visible ? html`
+          <div class="tooltip" 
+               style="top: ${this.tooltipInfo.y}px; left: ${this.tooltipInfo.x}px">
+            ${this.tooltipInfo.text}
+          </div>
+        ` : ''}
       </div>
     `;
   } 

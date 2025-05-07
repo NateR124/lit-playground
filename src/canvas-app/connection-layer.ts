@@ -1,3 +1,4 @@
+// src/canvas-app/connection-layer.ts
 import { LitElement, html, css, svg } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 

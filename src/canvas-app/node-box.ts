@@ -1,3 +1,4 @@
+// src/canvas-app/node-box.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
@@ -25,7 +26,7 @@ export class NodeBox extends LitElement {
     user-select: none;
 
     resize: both;
-    overflow: hidden;
+    overflow: visible !important;
   }
   :host([dragging]) {
     cursor: grabbing;
@@ -45,6 +46,7 @@ export class NodeBox extends LitElement {
     display: flex;
     flex-direction: column;
     font-size: 0.8rem;
+    overflow: hidden;
   }
 
   .input, .output {
@@ -69,11 +71,6 @@ export class NodeBox extends LitElement {
     pointer-events: auto;
   }
   
-  /* Target node highlighting when dragging a connection */
-  :host(.connection-target) {
-    box-shadow: 0 0 0 2px #6c9, 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-    
   .handle.out {
     position: absolute;
     right: -6px;
@@ -81,13 +78,6 @@ export class NodeBox extends LitElement {
     transform: translateY(-50%);
     z-index: 10;
   }
-  
-  :host {
-    /* Add this to ensure handle can overflow */
-    overflow: visible !important;
-  }
-  
-  /* Removed handle.in styling */
   
   .handle:hover {
     background: #6c9;
@@ -116,6 +106,16 @@ export class NodeBox extends LitElement {
   }
   button:hover {
     color: #ff6666;
+  }
+  
+  /* Target node highlighting when dragging a connection */
+  :host(.connection-target) {
+    box-shadow: 0 0 0 2px #6c9, 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Invalid target styling */
+  :host(.invalid-target) {
+    box-shadow: 0 0 0 2px #f66, 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 `;
 
@@ -303,9 +303,9 @@ export class NodeBox extends LitElement {
             readonly=true
           >
           </textarea>
-          <div class="handle out" @mousedown=${this.handleOutPointerDown}></div>
         </div>
       </div>
+      <div class="handle out" @mousedown=${this.handleOutPointerDown}></div>
     `;
   }
 }
