@@ -152,6 +152,9 @@ export class PromptCanvas extends LitElement {
     this.draggingConnection.mouseX = x;
     this.draggingConnection.mouseY = y;
     
+    // Update target node highlighting
+    this.findNodeAtPosition(x, y);
+    
     this.requestUpdate();
   }
   
@@ -180,9 +183,12 @@ export class PromptCanvas extends LitElement {
   };
   
   // Helper methods
-  private findNodeAtPosition(x: number, y: number): NodeBox | null {
+  private findNodeAtPosition(x: number, y: number) {
     const elements = this.shadowRoot?.querySelectorAll('node-box');
     if (!elements) return null;
+    
+    // First, remove highlight from all nodes
+    elements.forEach(el => el.classList.remove('connection-target'));
     
     for (const element of Array.from(elements)) {
       const rect = element.getBoundingClientRect();
@@ -192,7 +198,9 @@ export class PromptCanvas extends LitElement {
         y >= rect.top && 
         y <= rect.bottom
       ) {
-        return element as NodeBox;
+        // Add highlight to target node
+        element.classList.add('connection-target');
+        return element;
       }
     }
     
@@ -296,13 +304,4 @@ export class PromptCanvas extends LitElement {
       </div>
     `;
   } 
-}
-
-// Add NodeBox interface for TypeScript
-interface NodeBox extends HTMLElement {
-  nodeId: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
 }

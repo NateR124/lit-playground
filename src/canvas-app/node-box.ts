@@ -66,20 +66,28 @@ export class NodeBox extends LitElement {
     border-radius: 50%;
     background: #F5F5F5;
     cursor: pointer;
-    z-index: 4;
+    z-index: 10;
+    pointer-events: auto;
+  }
+  
+  /* Target node highlighting when dragging a connection */
+  :host(.connection-target) {
+    box-shadow: 0 0 0 2px #6c9, 0 2px 4px rgba(0, 0, 0, 0.3);
   }
     
   .handle.out {
     right: -6px;
     top: 50%;
     transform: translateY(-50%);
+    overflow: visible;
   }
   
-  .handle.in {
-    left: -6px;
-    top: 50%;
-    transform: translateY(-50%);
+  :host {
+    /* Add this to ensure handle can overflow */
+    overflow: visible !important;
   }
+  
+  /* Removed handle.in styling */
   
   .handle:hover {
     background: #6c9;
@@ -202,8 +210,9 @@ export class NodeBox extends LitElement {
   };
 
   /* --- Connection --- */
-  private handleOutPointerDown = (e: PointerEvent) => {
+  private handleOutPointerDown = (e: MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     
     // Get the position of the handle
     const rect = this.getBoundingClientRect();
@@ -220,11 +229,12 @@ export class NodeBox extends LitElement {
       composed: true
     }));
     
-    window.addEventListener('pointermove', this.handleOutPointerMove);
-    window.addEventListener('pointerup', this.handleOutPointerUp);
+    // Add global event listeners
+    window.addEventListener('mousemove', this.handleOutMouseMove);
+    window.addEventListener('mouseup', this.handleOutMouseUp);
   };
   
-  private handleOutPointerMove = (e: PointerEvent) => {
+  private handleOutMouseMove = (e: MouseEvent) => {
     this.dispatchEvent(new CustomEvent('connection-move', {
       detail: { 
         x: e.clientX, 
@@ -235,7 +245,7 @@ export class NodeBox extends LitElement {
     }));
   };
   
-  private handleOutPointerUp = (e: PointerEvent) => {
+  private handleOutMouseUp = (e: MouseEvent) => {
     this.dispatchEvent(new CustomEvent('connection-end', {
       detail: { 
         x: e.clientX, 
@@ -245,8 +255,8 @@ export class NodeBox extends LitElement {
       composed: true
     }));
     
-    window.removeEventListener('pointermove', this.handleOutPointerMove);
-    window.removeEventListener('pointerup', this.handleOutPointerUp);
+    window.removeEventListener('mousemove', this.handleOutMouseMove);
+    window.removeEventListener('mouseup', this.handleOutMouseUp);
   };
 
   /* --- Resize --- */
@@ -266,20 +276,20 @@ export class NodeBox extends LitElement {
     return html`
       <div class="header" @pointerdown=${this.onPointerDown}>
         <span></span>
-        <button @pointerdown=${(e: PointerEvent) => e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
+        <button @pointerdown=${(e: Event) => e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
       </div>
       <div class="body">
         <div class="input">
-          <div class="handle in"></div>
+          <!-- Removed handle in -->
           <textarea
             .value=${this.systemPrompt}
-            @input=${(e: any) => this.systemPrompt = e.target.value}
+            @input=${(e: Event) => this.systemPrompt = (e.target as HTMLTextAreaElement).value}
             placeholder="System Prompt"
           >
           </textarea>
           <textarea
             .value=${this.input}
-            @input=${(e: any) => this.input = e.target.value}
+            @input=${(e: Event) => this.input = (e.target as HTMLTextAreaElement).value}
             placeholder="User Text"
           >
           </textarea>
@@ -290,7 +300,7 @@ export class NodeBox extends LitElement {
             readonly=true
           >
           </textarea>
-          <div class="handle out" @pointerdown=${this.handleOutPointerDown}></div>
+          <div class="handle out" @mousedown=${this.handleOutPointerDown}></div>
         </div>
       </div>
     `;
