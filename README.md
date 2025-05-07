@@ -1,9 +1,9 @@
 # Lit GPT Flow Playground
 
-This is a webapp that will use Lit Web Components to assemble an "OpenAI Prompt" workflow. It's an exercise meant to build something cool, while demonstrating an understanding of various Angular Concepts, Lit Components, etc.
+This is a webapp that will use Lit Web Components to assemble an "OpenAI Prompt" workflow. It's an exercise meant to build bit a set of Lit Components aimed at creating an AI prompt flow, while soldifying my understanding of Lit Component concepts.
 
-Will add details describing the app's functionality as it is further built out.
+The app's purpose is to allow someone to set up a "Flow" of AI Prompts, taking text inputs, running them along prompts, then feeding them to different sets of inputs.
 
-## NOTE: As of Monday May 5th, this is still a Work in Progress!
+## NOTE: As of Tuesday May the 6th, this is still a Work in Progress!
 
-I'm building this app in a day- it should be complete by the after noon of Tuesday, May the 6th!
+I'm building this app over the course of a few days. The current working version can be seen here: https://lit-gpt-playground.netlify.app/
