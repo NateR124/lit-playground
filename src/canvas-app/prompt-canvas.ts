@@ -92,6 +92,7 @@ export class PromptCanvas extends LitElement {
   };
 
   private tooltipTimer: number | null = null;
+  private isUpdatingConnections = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -133,7 +134,6 @@ export class PromptCanvas extends LitElement {
     this.controller.nodes.forEach(node => {
       const dependencyIndex = node.dependsOn.indexOf(id);
       if (dependencyIndex !== -1) {
-        console.log(`Removing dependency on ${id} from node ${node.id}`);
         node.dependsOn.splice(dependencyIndex, 1);
       }
     });
@@ -172,7 +172,6 @@ export class PromptCanvas extends LitElement {
   // Connection events
   private handleConnectionStart(e: CustomEvent) {
     const { id, x, y } = e.detail;
-    console.log('Connection start', id, x, y);
     
     this.draggingConnection = {
       sourceId: id,
@@ -198,8 +197,13 @@ export class PromptCanvas extends LitElement {
     this.requestUpdate();
   }
   
-  private handleConnectionEnd(e: CustomEvent) {
-    if (!this.draggingConnection) return;
+  private handleConnectionEnd(e: CustomEvent) {   
+    // Store the dragging connection info before it might get cleared
+    const draggingConnectionData = this.draggingConnection;
+    
+    if (!draggingConnectionData) {
+      return;
+    }
     
     // Clear tooltip
     this.tooltipInfo = { ...this.tooltipInfo, visible: false };
@@ -210,19 +214,10 @@ export class PromptCanvas extends LitElement {
     
     // Find which node (if any) the connection ends on
     const { x, y } = e.detail;
+    
     const targetElement = this.findNodeAtPosition(x, y);
     
-    if (targetElement && this.isValidConnectionTarget(this.draggingConnection.sourceId, targetElement)) {
-      // Create a connection
-      const targetId = (targetElement as any).nodeId || 
-                       targetElement.getAttribute('nodeId') || 
-                       targetElement.getAttribute('data-id');
-      if (targetId) {
-        this.createConnection(this.draggingConnection.sourceId, targetId);
-      }
-    }
-    
-    // Remove highlighting from all nodes
+    // Clear highlighting from all nodes
     const elements = this.shadowRoot?.querySelectorAll('node-box');
     if (elements) {
       elements.forEach(el => {
@@ -231,18 +226,62 @@ export class PromptCanvas extends LitElement {
       });
     }
     
-    // Clear dragging state
+    // IMPORTANT: Process the connection BEFORE clearing the dragging state
+    if (targetElement) {
+      // Get the target ID (trying multiple ways)
+      const targetId = targetElement.getAttribute('data-id');
+
+      if (targetId) {
+        // Check if the target is valid using the stored dragging connection data
+        const sourceId = draggingConnectionData.sourceId;
+        
+        const isValid = this.isValidConnectionTarget(sourceId, targetElement);
+        
+        if (isValid) {
+          this.createConnection(sourceId, targetId);
+        }
+      } else {
+        console.error("Could not determine target ID");
+      }
+    }
+    
+    // Now clear the dragging state
     this.draggingConnection = null;
     this.requestUpdate();
   }
   
-  private handleGlobalMouseUp = () => {
+  private handleGlobalMouseUp = (e: MouseEvent) => {
+
+    const elements = this.shadowRoot?.querySelectorAll('node-box');
+    if (elements) {
+      for (const element of Array.from(elements)) {
+        const rect = element.getBoundingClientRect();
+        if (
+          e.clientX >= rect.left && 
+          e.clientX <= rect.right && 
+          e.clientY >= rect.top && 
+          e.clientY <= rect.bottom
+        ) {
+          return;
+        }
+      }
+    }
+    
+    // Handle mouse up outside of any nodes
     if (this.draggingConnection) {
       // Clear tooltip
       this.tooltipInfo = { ...this.tooltipInfo, visible: false };
       if (this.tooltipTimer !== null) {
         window.clearTimeout(this.tooltipTimer);
         this.tooltipTimer = null;
+      }
+      
+      // Clear any highlighting
+      if (elements) {
+        elements.forEach(el => {
+          el.classList.remove('connection-target');
+          el.classList.remove('invalid-target');
+        });
       }
       
       this.draggingConnection = null;
@@ -252,9 +291,12 @@ export class PromptCanvas extends LitElement {
   
   // Helper methods
   private findNodeAtPosition(x: number, y: number) {
+ 
     const elements = this.shadowRoot?.querySelectorAll('node-box');
-    if (!elements) return null;
-    
+    if (!elements) {
+      return null;
+    }
+
     // First, remove highlight from all nodes
     elements.forEach(el => {
       el.classList.remove('connection-target');
@@ -272,13 +314,17 @@ export class PromptCanvas extends LitElement {
     
     for (const element of Array.from(elements)) {
       const rect = element.getBoundingClientRect();
+      
       if (
         x >= rect.left && 
         x <= rect.right && 
         y >= rect.top && 
         y <= rect.bottom
       ) {
-        // Get source node ID
+        // Get node ID
+        const nodeId = element.getAttribute('data-id');
+        
+        // Get source node ID if dragging
         if (this.draggingConnection) {
           const sourceId = this.draggingConnection.sourceId;
           
@@ -302,6 +348,7 @@ export class PromptCanvas extends LitElement {
             }, 500); // 500ms delay
           }
         }
+        
         return element;
       }
     }
@@ -379,73 +426,56 @@ export class PromptCanvas extends LitElement {
   }
   
   private createConnection(sourceId: string, targetId: string) {
+    
     // Find the target node in our data model
     const targetNode = this.controller.nodes.find(n => n.id === targetId);
-    if (!targetNode) return;
+    if (!targetNode) {
+      console.error("Target node not found:", targetId);
+      return;
+    }
     
-    console.log("Creating connection:", { sourceId, targetId });
+    // Initialize dependsOn array if it doesn't exist
+    if (!targetNode.dependsOn) {
+      targetNode.dependsOn = [];
+    }
     
     // Add the dependency if it doesn't already exist
     if (!targetNode.dependsOn.includes(sourceId)) {
       targetNode.dependsOn.push(sourceId);
-      console.log("Updated dependencies:", targetNode.dependsOn);
       
       // Force immediate update of connections
       this.updateConnectionsFromNodes();
-      console.log("Connections after update:", this.connections);
       
       this.save();
+      
+      // Force another update cycle to ensure connections are rendered
+      this.requestUpdate();
     }
   }
   
   private updateConnectionsFromNodes() {
     const connections: ConnectionInfo[] = [];
     
-    // Wait for rendering to complete before calculating positions
-    requestAnimationFrame(() => {
-      this.controller.nodes.forEach(targetNode => {
-        targetNode.dependsOn.forEach(sourceId => {
-          const sourceNode = this.controller.nodes.find(n => n.id === sourceId);
-          if (!sourceNode) return;
-          
-          // Find the elements to get their positions
-          const sourceEl = this.shadowRoot?.querySelector(`node-box[nodeId="${sourceId}"]`);
-          const targetEl = this.shadowRoot?.querySelector(`node-box[nodeId="${targetNode.id}"]`);
-          
-          if (sourceEl && targetEl) {
-            // Find the handle element to get its exact position
-            const sourceHandle = sourceEl.shadowRoot?.querySelector('.handle.out');
-            const sourceRect = sourceEl.getBoundingClientRect();
-            const targetRect = targetEl.getBoundingClientRect();
-            
-            let sourceX, sourceY;
-            
-            if (sourceHandle) {
-              // Use the handle position if available
-              const handleRect = sourceHandle.getBoundingClientRect();
-              sourceX = handleRect.left + handleRect.width / 2;
-              sourceY = handleRect.top + handleRect.height / 2;
-            } else {
-              // Fallback to the right center of the node
-              sourceX = sourceRect.right;
-              sourceY = sourceRect.top + sourceRect.height / 2;
-            }
-            
-            connections.push({
-              sourceId,
-              targetId: targetNode.id,
-              sourceX,
-              sourceY,
-              targetX: targetRect.left,
-              targetY: targetRect.top + targetRect.height / 2
-            });
-          }
+    this.controller.nodes.forEach(targetNode => {
+      if (!targetNode.dependsOn || !Array.isArray(targetNode.dependsOn)) return;
+      
+      targetNode.dependsOn.forEach(sourceId => {
+        const sourceNode = this.controller.nodes.find(n => n.id === sourceId);
+        if (!sourceNode) return;
+        
+        // Use simple node data for positions
+        connections.push({
+          sourceId,
+          targetId: targetNode.id,
+          sourceX: sourceNode.x + sourceNode.w, 
+          sourceY: sourceNode.y + sourceNode.h / 2,
+          targetX: targetNode.x,
+          targetY: targetNode.y + targetNode.h / 2
         });
       });
-      
-      this.connections = connections;
-      this.requestUpdate();
     });
+    
+    this.connections = connections;
   }
 
   private save() {
@@ -456,14 +486,20 @@ export class PromptCanvas extends LitElement {
     }
   }
 
-  // First update right after connecting to make sure connections are shown
   override firstUpdated() {
     this.updateConnectionsFromNodes();
   }
 
   // Also update whenever render completes to ensure connection positions are accurate
-  override updated() {
-    this.updateConnectionsFromNodes();
+  override updated(changedProperties: Map<string, any>) {
+    if (!this.isUpdatingConnections && !changedProperties.has('connections')) {
+      this.isUpdatingConnections = true;
+      this.updateConnectionsFromNodes();
+      // Reset the flag after a small delay to allow the update to complete
+      setTimeout(() => {
+        this.isUpdatingConnections = false;
+      }, 0);
+    }
   }
 
   override render() {
