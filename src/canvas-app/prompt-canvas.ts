@@ -2,7 +2,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { FlowController } from './flow-controller';
-import '../node-box/node-box';
+import './node-box';
 
 @customElement('prompt-canvas')
 export class PromptCanvas extends LitElement {

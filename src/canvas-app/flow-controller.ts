@@ -11,10 +11,9 @@ export interface NodeData {
   
   export class FlowController {
     public nodes: NodeData[] = [];
-    public zoom = 1;
-    public offset = { x: 0, y: 0 };
-
-    connections: { from: string; to: string }[] = [];
+    // TODO: Implement Zoom/offset
+    // public zoom = 1;
+    // public offset = { x: 0, y: 0 };
 
     constructor(initialNodes: NodeData[] = []) {
       this.nodes = initialNodes;
@@ -48,10 +47,10 @@ export interface NodeData {
       }
     }
 
-    updateZoomAndOffset(scale: number, x: number, y: number) {
-      this.zoom = scale;
-      this.offset = { x, y };
-    }
+    // updateZoomAndOffset(scale: number, x: number, y: number) {
+    //   this.zoom = scale;
+    //   this.offset = { x, y };
+    // }
   
     serialize() {
       return JSON.stringify({ nodes: this.nodes });

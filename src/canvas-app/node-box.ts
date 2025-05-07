@@ -67,7 +67,6 @@ export class NodeBox extends LitElement {
   }
     
   .handle.out{right:-6px;}
-  .handle.in{left:-6px;display:none;}
 
   textarea{
     flex:1;
@@ -113,7 +112,6 @@ export class NodeBox extends LitElement {
     this.updatePosition();
     this.updateSize();
 
-    /* watch for manual resize */
     this.ro = new ResizeObserver(([entry])=>{
       const {width,height} = entry.contentRect;
       this.w = width;
@@ -168,7 +166,7 @@ export class NodeBox extends LitElement {
     document.body.style.userSelect = '';
   };
 
-  /* --- delete & connect --- */
+  /* --- Delete --- */
   private deleteSelf = (e: MouseEvent) => {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent('node-delete', {
@@ -178,20 +176,7 @@ export class NodeBox extends LitElement {
     }));
   };
 
-  private startConnect = (e: PointerEvent) => {
-    e.stopPropagation();
-    this.dispatchEvent(new CustomEvent('node-connect-start', {
-      detail: {
-        id: this.nodeId,
-        x: this.x + this.offsetWidth,
-        y: this.y + this.offsetHeight / 2,
-      },
-      bubbles: true,
-      composed: true,
-    }));
-  };
-
-  /* --- resize handlers --- */
+  /* --- Resize --- */
   private ro?:ResizeObserver;
 
   override disconnectedCallback(){
@@ -204,7 +189,6 @@ export class NodeBox extends LitElement {
     this.style.height = `${this.h}px`;
   }
 
-  /* --- template --- */
   override render() {
     return html`
       <div class="header" @pointerdown=${this.onPointerDown}>
@@ -225,7 +209,6 @@ export class NodeBox extends LitElement {
             placeholder="User Text"
           >
           </textarea>
-          <div class="handle in" @pointerdown=${this.startConnect}></div>
         </div>
         <div class="output">
           <textarea
@@ -233,7 +216,7 @@ export class NodeBox extends LitElement {
             readonly=true
             >
           </textarea>
-          <div class="handle out" @pointerdown=${this.startConnect}></div>
+          <div class="handle out"</div>
         </div>
       </div>
      

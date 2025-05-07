@@ -1,7 +1,7 @@
 // canvas-app/canvas-app.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import '../node-box/node-box.js';
+import './node-box.js';
 
 interface NodeData{
   id:string;
@@ -62,17 +62,6 @@ export class PromptCanvas extends LitElement {
   }
 
   override render() {
-    const connections = this.nodes
-      .flatMap(target => target.dependsOn.map(depId => {
-        const fromEl = this.shadowRoot?.querySelector(`[data-id="${depId}"]`);
-        const toEl   = this.shadowRoot?.querySelector(`[data-id="${target.id}"]`);
-
-        return (fromEl && toEl)
-          ? { from: fromEl.getBoundingClientRect(), to: toEl.getBoundingClientRect() }
-          : null;
-      }))
-      .filter((x): x is { from: DOMRect; to: DOMRect } => x !== null);
-
     return html`
       <link rel="stylesheet" href="./canvas-app/styles.css">
       <div class="toolbar">
