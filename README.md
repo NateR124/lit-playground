@@ -13,8 +13,8 @@ Think similar to apps like Zapier, Make, etc. but for AI prompts.
 
 I'm building this app over the course of a few days, it's not done yet! What's left to do:
 
-Fix error flagging for node connections (circular connections, etc.)
-Implement "Play button" that will run the flow with AI prompts
-Update Nodes so the user input is hidden, if it has nodes connected to it
-Add ability to delete/remove connections
-Visual polish!
+* Fix error flagging for node connections (circular connections, etc.)
+* Implement "Play button" that will run the flow with AI prompts
+* Update Nodes so the user input is hidden, if it has nodes connected to it
+* Add ability to delete/remove connections
+* Visual polish!
