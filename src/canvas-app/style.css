@@ -9,9 +9,7 @@
     width: 100%;
     height: 100%;
     background:
-      /* dots */
       radial-gradient(circle, var(--grid-dot) 1px, transparent 1px) 0 0 / var(--grid-size) var(--grid-size),
-      /* solid black */
       var(--grid-color);
     overflow: hidden;
     position: relative;
