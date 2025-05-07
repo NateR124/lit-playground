@@ -11,6 +11,7 @@ export interface NodeData {
   
   export class FlowController {
     public nodes: NodeData[] = [];
+    
     // TODO: Implement Zoom/offset
     // public zoom = 1;
     // public offset = { x: 0, y: 0 };
@@ -19,10 +20,8 @@ export interface NodeData {
       this.nodes = initialNodes;
     }
 
-    addNode(x = 100, y = 100) {
+    addNode(x = 100, y = 100, w = 200, h = 230) {
       const id = crypto.randomUUID();
-      const w = 200;
-      const h = 230;
       this.nodes.push({ id, x, y, w, h, dependsOn: [] });
       return id;
     }
