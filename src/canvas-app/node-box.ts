@@ -1,4 +1,3 @@
-// src/canvas-app/node-box.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
@@ -76,10 +75,11 @@ export class NodeBox extends LitElement {
   }
     
   .handle.out {
+    position: absolute;
     right: -6px;
-    top: 50%;
+    top: 50%; /* Center relative to the host element */
     transform: translateY(-50%);
-    overflow: visible;
+    z-index: 10;
   }
   
   :host {
@@ -214,10 +214,13 @@ export class NodeBox extends LitElement {
     e.stopPropagation();
     e.preventDefault();
     
-    // Get the position of the handle
-    const rect = this.getBoundingClientRect();
-    const handleX = rect.right;
-    const handleY = rect.top + rect.height / 2;
+    // Get the position of the handle itself
+    const handleElement = e.currentTarget as HTMLElement;
+    const handleRect = handleElement.getBoundingClientRect();
+    
+    // Use the center of the handle as the starting point
+    const handleX = handleRect.left + handleRect.width / 2;
+    const handleY = handleRect.top + handleRect.height / 2;
     
     this.dispatchEvent(new CustomEvent('connection-start', {
       detail: { 

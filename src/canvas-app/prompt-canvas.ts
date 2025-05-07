@@ -235,14 +235,29 @@ export class PromptCanvas extends LitElement {
           const targetEl = this.shadowRoot?.querySelector(`node-box[nodeId="${targetNode.id}"]`);
           
           if (sourceEl && targetEl) {
+            // Find the handle element to get its exact position
+            const sourceHandle = sourceEl.shadowRoot?.querySelector('.handle.out');
             const sourceRect = sourceEl.getBoundingClientRect();
             const targetRect = targetEl.getBoundingClientRect();
+            
+            let sourceX, sourceY;
+            
+            if (sourceHandle) {
+              // Use the handle position if available
+              const handleRect = sourceHandle.getBoundingClientRect();
+              sourceX = handleRect.left + handleRect.width / 2;
+              sourceY = handleRect.top + handleRect.height / 2;
+            } else {
+              // Fallback to the right center of the node
+              sourceX = sourceRect.right;
+              sourceY = sourceRect.top + sourceRect.height / 2;
+            }
             
             connections.push({
               sourceId,
               targetId: targetNode.id,
-              sourceX: sourceRect.right,
-              sourceY: sourceRect.top + sourceRect.height / 2,
+              sourceX,
+              sourceY,
               targetX: targetRect.left,
               targetY: targetRect.top + targetRect.height / 2
             });
