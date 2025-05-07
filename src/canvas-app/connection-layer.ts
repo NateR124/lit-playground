@@ -1,4 +1,3 @@
-// src/canvas-app/connection-layer.ts
 import { LitElement, html, css, svg } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
@@ -43,7 +42,6 @@ export class ConnectionLayer extends LitElement {
     
     path {
       fill: none;
-      stroke-width: 2px;
     }
     
     path.connection {
@@ -55,20 +53,30 @@ export class ConnectionLayer extends LitElement {
       stroke: #69c;
       stroke-width: 2px;
       stroke-dasharray: 5, 5;
+      animation: dash 500ms linear infinite;
     }
     
     path.outline {
       stroke: #333;
       stroke-width: 4px;
     }
+    
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -10;
+      }
+    }
   `;
 
   @property({ type: Array }) connections: Connection[] = [];
   @property({ type: Object }) draggingConnection: DraggingConnection | null = null;
 
+  // Calculate a bezier curve path between two points
   private createPath(x1: number, y1: number, x2: number, y2: number): string {
+    // Calculate control points for a nice curve
     const dx = Math.abs(x2 - x1) * 0.5;
     
+    // Create a bezier curve path
     return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
   }
 
@@ -83,6 +91,7 @@ export class ConnectionLayer extends LitElement {
             conn.targetY
           );
           
+          // Return both outline and connection path for better visibility
           return svg`
             <path class="outline" d="${path}"></path>
             <path class="connection" d="${path}"></path>
@@ -99,7 +108,7 @@ export class ConnectionLayer extends LitElement {
               this.draggingConnection.mouseY
             )}"
           ></path>
-        ` : ''}
+        ` : svg``}
       </svg>
     `;
   }

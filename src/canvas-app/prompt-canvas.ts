@@ -1,4 +1,3 @@
-// src/canvas-app/prompt-canvas.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { FlowController } from './flow-controller.js';
@@ -72,17 +71,19 @@ export class PromptCanvas extends LitElement {
       if (saved) this.controller.deserialize(saved);
       else this.controller.addNode(200, 150);
       
+      // Rebuild connections based on dependsOn arrays
       this.updateConnectionsFromNodes();
     } catch (error) {
       console.warn("Failed to load flow data:", error);
       this.controller.addNode(200, 150);
     }
     
-    window.addEventListener('pointerup', this.handleGlobalPointerUp);
+    // Add event listener for potential connection drop outside nodes
+    window.addEventListener('mouseup', this.handleGlobalMouseUp);
   }
   
   override disconnectedCallback(): void {
-    window.removeEventListener('pointerup', this.handleGlobalPointerUp);
+    window.removeEventListener('mouseup', this.handleGlobalMouseUp);
     super.disconnectedCallback();
   }
 
@@ -93,10 +94,13 @@ export class PromptCanvas extends LitElement {
   }
 
   private handleDeleteNode(e: CustomEvent) {
+    // Remove connections involving this node
     const { id } = e.detail;
     
+    // Remove node from controller
     this.controller.removeNode(id);
     
+    // Update connections
     this.updateConnectionsFromNodes();
     
     this.requestUpdate();
@@ -106,6 +110,10 @@ export class PromptCanvas extends LitElement {
   private handleResizeNode(e: CustomEvent) {
     const { id, w, h } = e.detail;
     this.controller.updateNodeSize(id, w, h);
+    
+    // Update connections after resize
+    this.updateConnectionsFromNodes();
+    
     this.requestUpdate();
     this.save();
   }
@@ -114,14 +122,17 @@ export class PromptCanvas extends LitElement {
     const { id, x, y } = e.detail;
     this.controller.updateNodePosition(id, x, y);
     
+    // Update connection positions
     this.updateConnectionsFromNodes();
     
     this.requestUpdate();
     this.save();
   }
   
+  // Connection events
   private handleConnectionStart(e: CustomEvent) {
     const { id, x, y } = e.detail;
+    console.log('Connection start', id, x, y);
     
     this.draggingConnection = {
       sourceId: id,
@@ -147,18 +158,21 @@ export class PromptCanvas extends LitElement {
   private handleConnectionEnd(e: CustomEvent) {
     if (!this.draggingConnection) return;
     
+    // Find which node (if any) the connection ends on
     const { x, y } = e.detail;
     const targetElement = this.findNodeAtPosition(x, y);
     
     if (targetElement && targetElement.nodeId !== this.draggingConnection.sourceId) {
+      // Create a connection
       this.createConnection(this.draggingConnection.sourceId, targetElement.nodeId);
     }
     
+    // Clear dragging state
     this.draggingConnection = null;
     this.requestUpdate();
   }
   
-  private handleGlobalPointerUp = () => {
+  private handleGlobalMouseUp = () => {
     if (this.draggingConnection) {
       this.draggingConnection = null;
       this.requestUpdate();
@@ -186,9 +200,11 @@ export class PromptCanvas extends LitElement {
   }
   
   private createConnection(sourceId: string, targetId: string) {
+    // Find the target node in our data model
     const targetNode = this.controller.nodes.find(n => n.id === targetId);
     if (!targetNode) return;
     
+    // Add the dependency if it doesn't already exist
     if (!targetNode.dependsOn.includes(sourceId)) {
       targetNode.dependsOn.push(sourceId);
       this.updateConnectionsFromNodes();
@@ -199,31 +215,36 @@ export class PromptCanvas extends LitElement {
   private updateConnectionsFromNodes() {
     const connections: ConnectionInfo[] = [];
     
-    this.controller.nodes.forEach(targetNode => {
-      targetNode.dependsOn.forEach(sourceId => {
-        const sourceNode = this.controller.nodes.find(n => n.id === sourceId);
-        if (!sourceNode) return;
-        
-        const sourceEl = this.shadowRoot?.querySelector(`node-box[nodeId="${sourceId}"]`);
-        const targetEl = this.shadowRoot?.querySelector(`node-box[nodeId="${targetNode.id}"]`);
-        
-        if (sourceEl && targetEl) {
-          const sourceRect = sourceEl.getBoundingClientRect();
-          const targetRect = targetEl.getBoundingClientRect();
+    // Wait for rendering to complete before calculating positions
+    requestAnimationFrame(() => {
+      this.controller.nodes.forEach(targetNode => {
+        targetNode.dependsOn.forEach(sourceId => {
+          const sourceNode = this.controller.nodes.find(n => n.id === sourceId);
+          if (!sourceNode) return;
           
-          connections.push({
-            sourceId,
-            targetId: targetNode.id,
-            sourceX: sourceRect.right,
-            sourceY: sourceRect.top + sourceRect.height / 2,
-            targetX: targetRect.left,
-            targetY: targetRect.top + targetRect.height / 2
-          });
-        }
+          // Find the elements to get their positions
+          const sourceEl = this.shadowRoot?.querySelector(`node-box[nodeId="${sourceId}"]`);
+          const targetEl = this.shadowRoot?.querySelector(`node-box[nodeId="${targetNode.id}"]`);
+          
+          if (sourceEl && targetEl) {
+            const sourceRect = sourceEl.getBoundingClientRect();
+            const targetRect = targetEl.getBoundingClientRect();
+            
+            connections.push({
+              sourceId,
+              targetId: targetNode.id,
+              sourceX: sourceRect.right,
+              sourceY: sourceRect.top + sourceRect.height / 2,
+              targetX: targetRect.left,
+              targetY: targetRect.top + targetRect.height / 2
+            });
+          }
+        });
       });
+      
+      this.connections = connections;
+      this.requestUpdate();
     });
-    
-    this.connections = connections;
   }
 
   private save() {
@@ -234,13 +255,19 @@ export class PromptCanvas extends LitElement {
     }
   }
 
+  // First update right after connecting to make sure connections are shown
+  override firstUpdated() {
+    this.updateConnectionsFromNodes();
+  }
+
+  // Also update whenever render completes to ensure connection positions are accurate
+  override updated() {
+    this.updateConnectionsFromNodes();
+  }
+
   override render() {
     return html`
-      <div class="canvas-container"
-        @connection-start=${this.handleConnectionStart}
-        @connection-move=${this.handleConnectionMove}
-        @connection-end=${this.handleConnectionEnd}
-      >
+      <div class="canvas-container">
         <div class="toolbar">
           <button @click=${this.handleAddNode}>+ Add Node</button>
         </div>
@@ -261,6 +288,9 @@ export class PromptCanvas extends LitElement {
             @node-dragged=${this.handleDragNode}
             @node-resized=${this.handleResizeNode}
             @node-delete=${this.handleDeleteNode}
+            @connection-start=${this.handleConnectionStart}
+            @connection-move=${this.handleConnectionMove}
+            @connection-end=${this.handleConnectionEnd}
           ></node-box>
         `)}
       </div>
@@ -268,6 +298,7 @@ export class PromptCanvas extends LitElement {
   } 
 }
 
+// Add NodeBox interface for TypeScript
 interface NodeBox extends HTMLElement {
   nodeId: string;
   x: number;
