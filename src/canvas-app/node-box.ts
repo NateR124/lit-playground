@@ -215,7 +215,7 @@ export class NodeBox extends LitElement {
             readonly=true
             >
           </textarea>
-          <div class="handle out"</div>
+          <div class="handle out"></div>
         </div>
       </div>
      
