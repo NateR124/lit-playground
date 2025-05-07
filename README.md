@@ -1,6 +1,6 @@
 # Lit GPT Flow Playground
 
-This is a webapp that will use Lit Web Components to assemble an "OpenAI Prompt" workflow. It's an exercise meant to build bit a set of Lit Components aimed at creating an AI prompt flow, while soldifying my understanding of Lit Component concepts.
+This is a webapp that will use Lit Web Components to assemble an "OpenAI Prompt" workflow- an app created to get hands on experience working with Lit Components.
 
 The app's purpose is to allow someone to set up a "Flow" of AI Prompts, taking text inputs, running them along prompts, then feeding them to different sets of inputs.
 
