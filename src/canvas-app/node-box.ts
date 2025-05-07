@@ -1,4 +1,4 @@
-// node-box/node-box.ts
+// src/canvas-app/node-box.ts
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
@@ -6,89 +6,109 @@ import { customElement, property } from 'lit/decorators.js';
 export class NodeBox extends LitElement {
   static override styles = css`
   :host {
-    position:absolute;
-    display:flex;
-    flex-direction:column;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
 
-    width:200px;
-    height:230px;
+    width: 200px;
+    height: 230px;
 
-    min-width:200px;
-    min-height:230px;
+    min-width: 200px;
+    min-height: 230px;
 
-    background:#2b2b2b;
-    border:2px solid #555;
-    border-radius:8px;
-    box-shadow:0 2px 4px rgba(0 0 0 /.3);
-    color:#fff;
-    font-family:sans-serif;
-    cursor:grab;
-    user-select:none;
+    background: #2b2b2b;
+    border: 2px solid #555;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-family: sans-serif;
+    cursor: grab;
+    user-select: none;
 
-    resize:both;
-    overflow:hidden;
+    resize: both;
+    overflow: hidden;
   }
-  :host([dragging]){cursor:grabbing;}
-
-  .header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:.5rem;
-    background:#444;
-    border-bottom:1px solid #555;
+  :host([dragging]) {
+    cursor: grabbing;
   }
 
-  .body{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    font-size:.8rem;
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: #444;
+    border-bottom: 1px solid #555;
   }
 
-  .input,.output{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    position:relative;
+  .body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
   }
 
-  .input textarea{background:#424242;}
+  .input, .output {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
 
-  .handle{
-    position:absolute;
-    bottom:50%;
-    width:12px;
-    height:12px;
-    border-radius:45%;
-    background:#F5F5F5;
-    cursor:pointer;
-    z-index:4;
+  .input textarea {
+    background: #424242;
+  }
+
+  .handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #F5F5F5;
+    cursor: pointer;
+    z-index: 4;
   }
     
-  .handle.out{right:-6px;}
-
-  textarea{
-    flex:1;
-    background:#333;
-    margin:.5rem;
-    color:#fff;
-    border:1px solid #555;
-    border-radius:4px;
-    font-size:.8rem;
-    resize:none;              
-    box-sizing:border-box;
-    min-height:0;
+  .handle.out {
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
+  .handle.in {
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
+  .handle:hover {
+    background: #6c9;
+    box-shadow: 0 0 0 2px rgba(102, 204, 153, 0.5);
   }
 
-  button{
-    background:none;
-    border:none;
-    color:#fff;
-    font-size:1rem;
-    cursor:pointer;
+  textarea {
+    flex: 1;
+    background: #333;
+    margin: 0.5rem;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    resize: none;              
+    box-sizing: border-box;
+    min-height: 0;
   }
-  button:hover{color:#ff6666;}
+
+  button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button:hover {
+    color: #ff6666;
+  }
 `;
 
   @property() nodeId!: string;
@@ -97,9 +117,9 @@ export class NodeBox extends LitElement {
   @property({type: Number}) w = 200;
   @property({type: Number}) h = 230;
 
-  @property(({type: String })) output = '';
-  @property(({type: String })) input = '';
-  @property(({type: String })) systemPrompt = '';
+  @property({type: String}) output = '';
+  @property({type: String}) input = '';
+  @property({type: String}) systemPrompt = '';
 
   private pointerId: number | null = null;
   private offsetX = 0;
@@ -111,18 +131,24 @@ export class NodeBox extends LitElement {
     this.updatePosition();
     this.updateSize();
 
-    this.ro = new ResizeObserver(([entry])=>{
-      const {width,height} = entry.contentRect;
+    this.ro = new ResizeObserver(([entry]) => {
+      const {width, height} = entry.contentRect;
       this.w = width;
       this.h = height;
-      this.dispatchEvent(new CustomEvent('node-resized',{
-        detail:{ id:this.nodeId, w:width, h:height },
-        bubbles:true,composed:true
+      this.dispatchEvent(new CustomEvent('node-resized', {
+        detail: { id: this.nodeId, w: width, h: height },
+        bubbles: true,
+        composed: true
       }));
     });
     this.ro.observe(this);
   }
-  override updated() { this.updatePosition();   this.updateSize();}
+  
+  override updated() { 
+    this.updatePosition();   
+    this.updateSize();
+  }
+  
   private updatePosition() {
     this.style.transform = `translate(${this.x}px, ${this.y}px)`;
   }
@@ -175,16 +201,64 @@ export class NodeBox extends LitElement {
     }));
   };
 
-  /* --- Resize --- */
-  private ro?:ResizeObserver;
+  /* --- Connection --- */
+  private handleOutPointerDown = (e: PointerEvent) => {
+    e.stopPropagation();
+    
+    // Get the position of the handle
+    const rect = this.getBoundingClientRect();
+    const handleX = rect.right;
+    const handleY = rect.top + rect.height / 2;
+    
+    this.dispatchEvent(new CustomEvent('connection-start', {
+      detail: { 
+        id: this.nodeId, 
+        x: handleX, 
+        y: handleY
+      },
+      bubbles: true,
+      composed: true
+    }));
+    
+    window.addEventListener('pointermove', this.handleOutPointerMove);
+    window.addEventListener('pointerup', this.handleOutPointerUp);
+  };
+  
+  private handleOutPointerMove = (e: PointerEvent) => {
+    this.dispatchEvent(new CustomEvent('connection-move', {
+      detail: { 
+        x: e.clientX, 
+        y: e.clientY 
+      },
+      bubbles: true,
+      composed: true
+    }));
+  };
+  
+  private handleOutPointerUp = (e: PointerEvent) => {
+    this.dispatchEvent(new CustomEvent('connection-end', {
+      detail: { 
+        x: e.clientX, 
+        y: e.clientY 
+      },
+      bubbles: true,
+      composed: true
+    }));
+    
+    window.removeEventListener('pointermove', this.handleOutPointerMove);
+    window.removeEventListener('pointerup', this.handleOutPointerUp);
+  };
 
-  override disconnectedCallback(){
+  /* --- Resize --- */
+  private ro?: ResizeObserver;
+
+  override disconnectedCallback() {
     this.ro?.disconnect();
     super.disconnectedCallback();
   }
 
-  private updateSize(){
-    this.style.width  = `${this.w}px`;
+  private updateSize() {
+    this.style.width = `${this.w}px`;
     this.style.height = `${this.h}px`;
   }
 
@@ -192,14 +266,15 @@ export class NodeBox extends LitElement {
     return html`
       <div class="header" @pointerdown=${this.onPointerDown}>
         <span></span>
-        <button @pointerdown=${(e: PointerEvent)=>e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
+        <button @pointerdown=${(e: PointerEvent) => e.stopPropagation()} @click=${this.deleteSelf}>✕</button>
       </div>
       <div class="body">
-        <div class="input">    
+        <div class="input">
+          <div class="handle in"></div>
           <textarea
             .value=${this.systemPrompt}
             @input=${(e: any) => this.systemPrompt = e.target.value}
-             placeholder="System Prompt"
+            placeholder="System Prompt"
           >
           </textarea>
           <textarea
@@ -213,12 +288,11 @@ export class NodeBox extends LitElement {
           <textarea
             .value=${this.output}
             readonly=true
-            >
+          >
           </textarea>
-          <div class="handle out"></div>
+          <div class="handle out" @pointerdown=${this.handleOutPointerDown}></div>
         </div>
       </div>
-     
     `;
   }
 }
