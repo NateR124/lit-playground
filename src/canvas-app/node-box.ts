@@ -6,7 +6,7 @@ import { customElement, property } from 'lit/decorators.js';
 export class NodeBox extends LitElement {
   static override styles = css`
   :host {
-    position: absolute; 
+    position: absolute;
     display: inline-block;
   }
 
@@ -112,11 +112,11 @@ export class NodeBox extends LitElement {
     color: #ff6666;
   }
   
-  .box.connection-target {
+  :host(.connection-target) .box {
     box-shadow: 0 0 0 2px #6c9, 0 2px 4px rgba(0, 0, 0, 0.3);
   }
-  
-  .box.invalid-target {
+
+  :host(.invalid-target) .box {
     box-shadow: 0 0 0 2px #f66, 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 `;
@@ -130,6 +130,9 @@ export class NodeBox extends LitElement {
   @property({type: String}) output = '';
   @property({type: String}) input = '';
   @property({type: String}) systemPrompt = '';
+  
+  @property({type: Boolean, reflect: true}) connectionTarget = false;
+  @property({type: Boolean, reflect: true}) invalidTarget = false;
 
   private pointerId: number | null = null;
   private offsetX = 0;
@@ -163,11 +166,17 @@ export class NodeBox extends LitElement {
     }
   }
   
-  override updated() { 
+  override updated(changedProperties: Map<string, any>) { 
     this.updatePosition();
     
     if (this.boxElement) {
       this.updateSize();
+      
+      // Update connection target classes based on property changes
+      if (changedProperties.has('connectionTarget') || changedProperties.has('invalidTarget')) {
+        this.boxElement.classList.toggle('connection-target', this.connectionTarget);
+        this.boxElement.classList.toggle('invalid-target', this.invalidTarget);
+      }
     }
   }
   
@@ -291,6 +300,18 @@ export class NodeBox extends LitElement {
     window.removeEventListener('mouseup', this.handleOutMouseUp);
   };
 
+  /* --- Connection Target Methods --- */
+  // Public methods to mark the node as a connection target
+  public markAsConnectionTarget(isValid = true) {
+    this.connectionTarget = true;
+    this.invalidTarget = !isValid;
+  }
+  
+  public clearConnectionTarget() {
+    this.connectionTarget = false;
+    this.invalidTarget = false;
+  }
+
   /* --- Resize --- */
   private ro?: ResizeObserver;
 
@@ -338,7 +359,6 @@ export class NodeBox extends LitElement {
             </div>
           </div>
         </div>
-        <!-- Handle positioned relative to the node-container -->
         <div class="handle out" @mousedown=${this.handleOutPointerDown}></div>
       </div>
     `;
