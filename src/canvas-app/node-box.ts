@@ -101,12 +101,11 @@ export class NodeBox extends LitElement {
   @property(({type: String })) input = '';
   @property(({type: String })) systemPrompt = '';
 
-  /* --- drag state --- */
   private pointerId: number | null = null;
   private offsetX = 0;
   private offsetY = 0;
 
-  /* --- lifecycle --- */
+  /* --- Lifecycle --- */
   override connectedCallback() {
     super.connectedCallback();
     this.updatePosition();
@@ -128,7 +127,7 @@ export class NodeBox extends LitElement {
     this.style.transform = `translate(${this.x}px, ${this.y}px)`;
   }
 
-  /* --- drag handlers --- */
+  /* --- Drag --- */
   private onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     const rect = this.getBoundingClientRect();
