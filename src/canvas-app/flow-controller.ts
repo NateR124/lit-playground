@@ -11,18 +11,13 @@ export interface NodeData {
   
   export class FlowController {
     public nodes: NodeData[] = [];
-    public apiKey = '';
-
+    
     // TODO: Implement Zoom/offset
     // public zoom = 1;
     // public offset = { x: 0, y: 0 };
 
     constructor(initialNodes: NodeData[] = []) {
       this.nodes = initialNodes;
-    }
-
-    setApiKey(key: string) {
-      this.apiKey = key;
     }
 
     addNode(x = 100, y = 100, w = 200, h = 230) {
@@ -57,14 +52,13 @@ export interface NodeData {
     // }
   
     serialize() {
-      return JSON.stringify({ nodes: this.nodes, apiKey: this.apiKey });
+      return JSON.stringify({ nodes: this.nodes });
     }
   
     deserialize(data: string) {
       try {
         const parsed = JSON.parse(data);
         this.nodes = parsed.nodes || [];
-        this.apiKey = parsed.apiKey || '';
       } catch (e) {
         console.warn("Failed to deserialize flow data", e);
       }

@@ -2,7 +2,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { FlowController } from './flow-controller.js';
-import { ExecutionEngine } from './execution-engine.js';
 import './node-box.js';
 import './connection-layer.js';
 
@@ -68,63 +67,6 @@ export class PromptCanvas extends LitElement {
       max-width: 200px;
       text-align: center;
     }
-    .tooltip::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: rgba(50, 50, 50, 0.9) transparent transparent transparent;
-    }
-    settings-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-      }
-      
-      .settings-dialog {
-        background: #333;
-        padding: 1.5rem;
-        border-radius: 8px;
-        width: 400px;
-        max-width: 90%;
-      }
-      
-      .form-group {
-        margin-bottom: 1rem;
-      }
-      
-      .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        color: #fff;
-      }
-      
-      .form-group input {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #555;
-        border-radius: 4px;
-        background: #444;
-        color: #fff;
-      }
-      
-      .dialog-buttons {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        margin-top: 1.5rem;
-      }
-
   `;
 
   @state() private controller = new FlowController();
@@ -136,9 +78,7 @@ export class PromptCanvas extends LitElement {
     mouseX: number;
     mouseY: number;
   } | null = null;
-  @state() private executionEngine!: ExecutionEngine;
-  @state() private showSettings = false;
-  @state() private isExecuting = false;
+  
   @state() private tooltipInfo: {
     visible: boolean;
     text: string;
@@ -156,7 +96,6 @@ export class PromptCanvas extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.executionEngine = new ExecutionEngine(this.controller);
     try {
       const saved = localStorage.getItem('flow-data');
       if (saved) this.controller.deserialize(saved);
@@ -180,38 +119,6 @@ export class PromptCanvas extends LitElement {
       this.tooltipTimer = null;
     }
     super.disconnectedCallback();
-  }
-
-  private async handlePlay() {
-    if (this.isExecuting) return;
-    
-    this.isExecuting = true;
-    
-    try {
-      await this.executionEngine.executeFlow();
-    } catch (error) {
-      console.error("Execution error:", error);
-    } finally {
-      this.isExecuting = false;
-    }
-  }
-
-  private handleShowSettings() {
-    this.showSettings = true;
-  }
-  
-  private handleHideSettings() {
-    this.showSettings = false;
-  }
-
-  private handleSaveSettings(e: Event) {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const apiKeyInput = form.querySelector('#api-key') as HTMLInputElement;
-    
-    this.controller.setApiKey(apiKeyInput.value);
-    this.save();
-    this.showSettings = false;
   }
 
   private handleAddNode() {
@@ -597,41 +504,11 @@ export class PromptCanvas extends LitElement {
 
   override render() {
     return html`
-    <div class="canvas-container">
-      <div class="toolbar">
-        <button @click=${this.handleAddNode}>+ Add Node</button>
-        <button 
-          @click=${this.handlePlay}
-          ?disabled=${true}
-        >
-          ${this.isExecuting ? 'Running...' : '▶ Execute Flow'}
-        </button>
-      </div>
-      
-      ${this.showSettings ? html`
-        <div class="settings-overlay">
-          <div class="settings-dialog">
-            <h2>Settings</h2>
-            <form @submit=${this.handleSaveSettings}>
-              <div class="form-group">
-                <label for="api-key">OpenAI API Key</label>
-                <input 
-                  type="password" 
-                  id="api-key" 
-                  .value=${this.controller.apiKey} 
-                  placeholder="sk-..." 
-                  required
-                />
-              </div>
-              <div class="dialog-buttons">
-                <button type="button" @click=${this.handleHideSettings}>Cancel</button>
-                <button type="submit">Save</button>
-              </div>
-            </form>
-          </div>
+      <div class="canvas-container">
+        <div class="toolbar">
+          <button @click=${this.handleAddNode}>+ Add Node</button>
         </div>
-      ` : ''}
-
+        
         <connection-layer 
           .connections=${this.connections}
           .draggingConnection=${this.draggingConnection}
